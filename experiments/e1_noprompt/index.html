@@ -1,0 +1,175 @@
+<html>
+
+<head>
+    <title>Stanford Linguistics - Select The Image!</title>
+
+    <!--JS-->
+
+    <!-- external general utilities -->
+    <script src="resources/shared/js/jquery-1.11.1.min.js"></script>
+    <script src="resources/shared/full-projects/jquery-ui/jquery-ui.min.js"></script>
+    <script src="resources/shared/js/underscore-min.js"></script>
+    <!-- if you want to draw stuff: -->
+    <!-- <script src="resources/shared/js/raphael-min.js"></script> -->
+
+    <!-- cocolab experiment logic -->
+    <script src="resources/shared/js/exp-V2.js"></script>
+    <script src="resources/shared/js/stream-V2.js"></script>
+
+    <!-- cocolab general utilities -->
+    <script src="resources/shared/js/mmturkey.js "></script>
+    <script src="resources/shared/js/browserCheck.js"></script>
+    <script src="resources/shared/js/utils.js"></script>
+    <!-- if you want to draw cute creatures (depends on raphael): -->
+    <!-- <script src="resources/shared/js/ecosystem.js"></script> -->
+
+    <!-- experiment specific helper functions -->
+    <!-- <script src="resources/js/local-utils.js"></script> -->
+
+    <!--CSS-->
+    <link href="resources/shared/full-projects/jquery-ui/jquery-ui.min.css" rel="stylesheet" type="text/css"/>
+    <link href="resources/shared/css/cocolab-style.css" rel="stylesheet" type="text/css"/>
+    <link href="resources/css/local-style.css" rel="stylesheet" type="text/css"/>
+
+    <!-- experiment file -->
+    <script src="resources/index.js"></script>
+    <script src="resources/conditions.js"></script>
+
+
+<!-- Load consent form
+<script>
+$(function(){
+  $("#consent-form").load("./resources/html/consent.html");
+});
+</script>
+-->
+
+</head>
+
+<body onload="init();">
+  <noscript>This task requires JavaScript.</noscript>
+
+  <div class="slide" id="i0" >
+    <p id="cocolab">Stanford Linguistics</p>
+    <p id="instruct-text">This task is about selecting images given sentences you will read. The HIT should take ~10 minutes. Please pay attention, and thanks for participating!</p>
+    <button id="start_button" type="button">Continue</button>
+  </div>
+
+<!--Consent form used in Stanford linguistics department and is good for ling245.
+Otherwise, modified to whatever is required for you given your affliation.
+-->
+<div class="slide" id="consent">
+  <div id="consent_1">
+  <p>We invite you to participate in a research study on language production and comprehension.
+  Your experimenter will ask you to do a linguistic task such as reading sentences or words,
+  naming pictures or describing scenes, making up sentences of your own, or participating in a
+  simple language game. </p>
+  <p>There are no risks or benefits of any kind involved in this study. </p>
+  <p>You will be paid for your participation at the posted rate. </p>
+  <p>If you have read this form and have decided to participate in this experiment, please
+  understand your participation is voluntary and you have the right to withdraw your consent or
+  discontinue participation at any time without penalty or loss of benefits to which you are
+  otherwise entitled. You have the right to refuse to do particular tasks. Your individual privacy
+  will be maintained in all published and written data resulting from the study.   You may print
+  this form for your records.</p>
+  </div>
+  <div id="consent_2">
+  <p>CONTACT INFORMATION: </p>
+  <p>If you have any questions, concerns or complaints about this research study, its procedures,
+  risks and benefits, you should contact the Protocol Director Meghan Sumner at
+  (650)-725-9336 </p>
+  <p>If you are not satisfied with how this study is being conducted, or if you have any concerns,
+  complaints, or general questions about the research or your rights as a participant, please
+  contact the Stanford Institutional Review Board (IRB) to speak to someone independent of the
+  research team at (650)-723-2480 or toll free at 1-866-680-2906. You can also write to the
+  Stanford IRB, Stanford University,
+  3000 El Camino Real, Five Palo Alto Square, 4th Floor,
+  Palo Alto, CA 94306 USA.</p>
+  <p>You may print this contact information for your records.</p>
+  <p>If you agree to participate, please proceed to the study tasks.</p>
+  </div>
+      <button onclick="_s.button()">Continue</button>
+</div>
+
+<div class="slide" id="instructions">
+  <h3>Instructions</h3>
+  <p>Mr. Davis, a grade school teacher, opened up an encyclopedia in his classroom yesterday and described the animals and objects he saw to his students. Unable to see the encylopedia themselves, his students would ask him questions about what he saw. 
+  <p>
+  For this task, you will be shown slides containing two pictures (for example, of a kangaroo and something else). For each slide, you'll be asked to select the object you think Mr. Davis was looking at. Simply click on the image that corresponds to your response. You'll see 24 slides in total. <p>
+  <button onclick="_s.button()">Start Experiment</button>
+</div>
+
+<div class="slide" id="img_select">
+  <p class = "prompt"></p>
+  <p class = "images"></p>
+</div>
+ 
+  <div class="slide"  id="subj_info">
+    <div class="long_form">
+      <div class="subj_info_title">Additional information</div>
+      <p class="info">Answering these questions is optional, but will help us understand your answers.</p>
+      <p>Did you read the instructions and do you think you did the HIT correctly?</p>
+      <label><input type="radio"  name="assess" value="No"/>No</label>
+      <label><input type="radio"  name="assess" value="Yes"/>Yes</label>
+      <label><input type="radio"  name="assess" value="Confused"/>I was confused</label>
+
+      <p>Were there any problems or bugs in the experiment?</p>
+      <textarea id="problems" rows="2" cols="50"></textarea>
+
+      <p>What do you think is a fair price for the work you did?</p>
+      <textarea id="fairprice" rows="1" cols="10"></textarea>
+
+      <p>Gender:
+        <select id="gender">
+          <label><option value=""/></label>
+          <label><option value="Male"/>Male</label>
+          <label><option value="Female"/>Female</label>
+          <label><option value="Other"/>Other</label>
+        </select>
+      </p>
+
+      <p>Age: <input type="text" id="age"/></p>
+
+      <p>Level Of Education:
+        <select id="education">
+          <label><option value="-1"/></label>
+          <label><option value="0"/>Some High School</label>
+          <label><option value="1"/>Graduated High School</label>
+          <label><option value="2"/>Some College</label>
+          <label><option value="3"/>Graduated College</label>
+          <label><option value="4"/>Hold a higher degree</label>
+        </select>
+      </p>
+
+      <p>Native Language: <input type="text" id="language"/></p>
+      <label>(the language(s) spoken at home when you were a child)</label>
+
+      <p>Did you enjoy the hit?</p>
+      <select id="enjoyment">
+        <label><option value="-1"></option></label>
+        <label><option value="0">Worse than the Average HIT</option></label>
+        <label><option value="1" >An Average HIT</option></label>
+        <label><option value="2">Better than average HIT</option></label>
+      </select>
+
+      <p>We would be interested in any comments you have about this experiment. Please type them here:</p>
+      <textarea id="comments" rows="3" cols="50"></textarea>
+      <br/>
+      <button onclick="_s.submit()">Submit</button>
+    </div>
+  </div>
+
+  <div id="thanks" class="slide js" >
+    <p  class="big">Thanks for your Time!</p>
+  </div>
+
+  <div class="progress">
+    <span>Progress:</span>
+    <div class="bar-wrapper">
+      <div class="bar" width="0%">
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
