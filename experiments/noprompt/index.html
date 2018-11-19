@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <title>Stanford Linguistics - Name The Image!</title>
+    <title>Stanford Linguistics - Select The Image!</title>
 
     <!--JS-->
 
@@ -51,7 +51,7 @@ $(function(){
 
   <div class="slide" id="i0" >
     <p id="cocolab">Stanford Linguistics</p>
-    <p id="instruct-text">This task is about describing images. The HIT should take ~10 minutes. Please pay attention, and thanks for participating!</p>
+    <p id="instruct-text">This task is about selecting images given sentences you will read. The HIT should take ~10 minutes. Please pay attention, and thanks for participating!</p>
     <button id="start_button" type="button">Continue</button>
   </div>
 
@@ -93,17 +93,16 @@ Otherwise, modified to whatever is required for you given your affliation.
 
 <div class="slide" id="instructions">
   <h3>Instructions</h3>
-  In this experiment, you'll be asked to identify images by typing text into your browser window. <b>You shouldn't need more than a word or two to identify the image.</b>
-<p>
-  For every image, you'll also have the option to say "I don't know" if you don't know what the image is. You'll see 48 images. <p>
+  <p>Mr. Davis, a grade school teacher, opened up an encyclopedia in his classroom yesterday and described the animals and objects he saw to his students. Unable to see the encylopedia themselves, his students would ask him questions about what he saw. 
+  <p>
+  For this task, you will be shown slides containing two pictures (for example, of a kangaroo and something else). For each slide, you'll be asked to select the object you think Mr. Davis was looking at. Simply click on the image that corresponds to your response. You'll see 28 slides in total. <p>
+  <p>NOTE: At times, you will see instructions, served in <b><i>italics</i></b>, which explicitly instruct you to select one of the two images. These serve as attention checks; failing too many of them can affect your compensation!</p>
   <button onclick="_s.button()">Start Experiment</button>
 </div>
 
 <div class="slide" id="img_select">
   <p class = "prompt"></p>
   <p class = "images"></p>
-  <p><input type="text" id="response"/><button onclick="_s.continue()">Enter response</button><button onclick="_s.dunno()">I don't know</button></p>
-  <div class="error" hidden><p> Please enter a response before continuing.</div>
 </div>
  
   <div class="slide"  id="subj_info">

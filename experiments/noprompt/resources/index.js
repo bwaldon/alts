@@ -1,16 +1,48 @@
+var exclusion_controls = [  {
+    "ref": "left",
+    "noun": "control_1",
+    "noun_pretty": null,
+    "ref_pretty": "Click on the image on the left.",
+    "kind": "control"
+  },
+  {
+    "ref": "right",
+    "noun": "control_2",
+    "noun_pretty": null,
+    "ref_pretty": "Click on the image on the right.",
+    "kind": "control"
+  },
+  {
+    "ref": "left",
+    "noun": "control_3",
+    "noun_pretty": null,
+    "ref_pretty": "Click on the image on the left.",
+    "kind": "control"
+  },
+  {
+    "ref": "right",
+    "noun": "control_4",
+    "noun_pretty": null,
+    "ref_pretty": "Click on the image on the right.",
+    "kind": "control"
+  }];
+
 var order = 1;
 
 function make_slides(f) {
-  var list = [];
-  for (i in _.range(control.length)) {
-  list.push({noun : control[i].noun, image: "target", imgpath: control[i].noun + "_good.jpeg"})
-  list.push({noun : control[i].noun, image: "competitor", imgpath: control[i].noun + "_bad.jpeg"})
-  }
-
   var   slides = {};
 
-  present_list = _.shuffle(list)
+  var makelist = function(stims) {
+    var exc = _.shuffle(exclusion_controls);
+    var firsthalf = stims.slice(0,12).concat(exc.slice(0,2))
+    firsthalf = _.shuffle(firsthalf)
+    var secondhalf = stims.slice(12,24).concat(exc.slice(2,4))
+    secondhalf = _.shuffle(secondhalf)
+    return firsthalf.concat(secondhalf);
+  }
 
+  present_list = makelist(control);
+ 
   slides.consent = slide({
      name : "consent",
      start: function() {
@@ -54,47 +86,62 @@ slides.critical = slide({
     present : present_list,
 
     //this gets run only at the beginning of the block
+  
     present_handle : function(stim) {
+    this.stim = stim; 
 
-      this.stim = stim; //I like to store this information in the slide so I can record it later.
+    if (stim.kind == "critical") {
+      $(".prompt").html('<b>Mr. Davis: </b>*mumble mumble*<p><b>What was Mr. Davis looking at?</b>');
+      img_order = _.shuffle(["good","bad"]);
+      $(".images").html('<img src = "resources/images/' + stim.noun + '_' + img_order[0] + '.jpeg" onclick = "_s.selection_' + img_order[0] + '()">' + 
+        '<img src = "resources/images/' + stim.noun + '_' + img_order[1] + '.jpeg" onclick = "_s.selection_' + img_order[1] + '()">')
+    } else if (stim.kind == "control") {
+      $(".prompt").html('<b><i>' + stim.ref_pretty + '</i></b>');
+      $(".images").html('<img src = "resources/images/' + stim.noun + '_left.jpeg" onclick = "_s.selection_left()">' + 
+        '<img src = "resources/images/' + stim.noun + '_right.jpeg" onclick = "_s.selection_right()">')
+    }
 
-      $(".prompt").html('<b>What is this?</b>');
-      $(".images").html('<img src = "resources/images/' + stim.imgpath +'">') 
     },
 
-    continue : function() {
-        if ($("#response").val().length == 0) {
-          $(".error").show();
-        } else {
-          this.know = true;
-          this.log_responses();
+    selection_right : function() {
+      img_order = "null";
+      this.selection = "right";
+      this.log_responses();
+      _stream.apply(this);
+    },
 
-        /* use _stream.apply(this); if and only if there is
-        "present" data. (and only *after* responses are logged) */
-        _stream.apply(this);
-        $("#response").val('');
-        $(".error").hide();
-        }   
-      },
+    selection_left : function() {
+      img_order = "null";
+      this.selection = "left";
+      this.log_responses();
+      _stream.apply(this);
+    },
 
-     dunno : function() {
-        this.know = false;
+    selection_good : function() {
+        this.selection = "target";
         this.log_responses();
 
         /* use _stream.apply(this); if and only if there is
         "present" data. (and only *after* responses are logged) */
         _stream.apply(this);
-        $("#response").val('');
-        $(".error").hide();
+      },
+
+    selection_bad : function() {
+        this.selection = "competitor";
+        this.log_responses();
+
+        /* use _stream.apply(this); if and only if there is
+        "present" data. (and only *after* responses are logged) */
+        _stream.apply(this);
       },
 
     log_responses : function() {
       exp.data_trials.push({
-        "response" : $("#response").val(),
-        "know" : this.know,
+        "img_order" : img_order,
+        "selection" : this.selection,
+        "type" : this.stim.ref,
         "id" : this.stim.noun,
         "order" : order,
-        "type" : this.stim.image, 
       });
     order = order + 1;
     },
