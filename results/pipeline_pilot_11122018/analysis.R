@@ -6,6 +6,8 @@ library(bootstrap)
 library(rwebppl)
 library(jsonlite)
 
+setwd("~/Documents/GitHub/symm_qp/results/pipeline_pilot_11122018")
+
 # HELPER SCRIPTS
 
 theta <- function(x,xdata,na.rm=T) {mean(xdata[x],na.rm=na.rm)}
@@ -84,17 +86,68 @@ summary(m)
 
 # BAYESIAN DATA ANALYSIS
 
+# LOAD & TRANSFORM DATA FROM NORMING STUDIES 
+
+# still have to exclude people...
+d_noprompt <- read.csv("results_noprompt.csv")
+
+noprompt_to_exclude <- d %>%
+  group_by(workerid, type, selection) %>%
+  filter((type == "left" && selection == "right") || (type == "right" && selection  == "left")) %>%
+  group_by(workerid) %>%
+  summarize(n_mistakes = n()) %>%
+  filter(n_mistakes > 0)
+
+d_noprompt <- d_noprompt %>%
+  filter(!(workerid %in% noprompt_to_exclude$workerid))
+
+d_noprompt <- d_noprompt %>%
+  # change for next run: condition is kind == "critical"
+  filter(type == "looks like") %>%
+  group_by(id) %>%
+  summarize(ntarget = sum(selection == "target"), 
+            ncompetitor = sum(selection == "competitor"), 
+            competitor_prior = ncompetitor / (ncompetitor + ntarget))
+
+d_naming <- read.csv("results_naming.csv")
+
+d_naming <- d_naming %>%
+  group_by(id) %>%
+  summarize(nknowtarget = sum(type == "target" & know == "True"),
+            nknowcompetitor = sum(type == "competitor" & know == "True"),
+            target_nameability = nknowtarget / sum(type == "target"),
+            competitor_nameability = nknowcompetitor / sum(type == "competitor"))
+
+# MERGE TO MAIN STUDY DATA (E.G. DATA FROM SYMMETRIC CONDITION)
+
 symmetric_byitem <- d %>%
   filter(condition == "symmetric" & kind == "critical" & type == "looks like") %>% 
   group_by(id) %>%
   summarize(ntarget = sum(selection == "target"), 
             ncompetitor = sum(selection == "competitor"), 
-            observation = ncompetitor / (ncompetitor + ntarget))
+            observed_competitor = ncompetitor / (ncompetitor + ntarget))
 
-symmetric_predictions <- webppl(program_file = "bda.wppl")
+symmetric_byitem <- merge(symmetric_byitem, d_naming, by = "id")
+symmetric_byitem <- merge(symmetric_byitem, d_noprompt, by = "id")
+symmetric_byitem <- symmetric_byitem %>%
+  select(id,observed_competitor,competitor_prior,target_nameability,competitor_nameability)
+
+# ANALYZE 
+
+bda <- read_file("bda.txt")
+
+symmetric_byitem_json <- toJSON(symmetric_byitem)
+
+symmetric_bda <- webppl(paste("var itemData = ", symmetric_byitem_json, "\n", bda))
+
+symmetric_posteriors <- (symmetric_bda$posteriors)$support
+
+symmetric_predictions <- symmetric_bda$predictions
 
 symmetric_byitem <- merge(symmetric_byitem, symmetric_predictions, by = "id")
 
-ggplot(symmetric_byitem, aes(x=observation, y=prediction)) + geom_point()
+ggplot(symmetric_byitem, aes(x=prediction, y=observed_competitor)) + geom_point()
 
-with(symmetric_byitem, cor(observation,prediction))
+with(symmetric_byitem, cor(prediction,observed_competitor))
+
+hist(symmetric_posteriors$alpha)

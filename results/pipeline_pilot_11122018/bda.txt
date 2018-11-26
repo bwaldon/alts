@@ -1,9 +1,8 @@
-var itemData = [
-  {id: "baseball", competitor_prior: 0.5, observed_competitor: 0.55, target_nameability : 0.7, competitor_nameability : 0.3},
-  {id: "cake", competitor_prior: 0.55, observed_competitor: 0.65, target_nameability : 0.9, competitor_nameability : 0.9},
-]
+// var itemData = [
+//  {id: "baseball", competitor_prior: 0.5, observed_competitor: 0.55, target_nameability : 0.7, competitor_nameability : 0.3},
+//  {id: "cake", competitor_prior: 0.55, observed_competitor: 0.65, target_nameability : 0.9, competitor_nameability : 0.9},
+// ]
  
-
 var statePrior = function(c) {
   return flip(c) ? "competitor" : "target"
 };
@@ -12,6 +11,7 @@ var utterances = ["istarget", "looksliketarget","nottarget","iscompetitor","notc
 
 var model = function() {
  
+ // could change
  var cost_looksliketarget = uniformDrift({a: 0, b: 5, w: 1})
  var cost_lookslikecompetitor= uniformDrift({a: 0, b: 5, w: 1})
  var cost_istarget = uniformDrift({a: 0, b: 5, w: 1})
@@ -100,14 +100,12 @@ var inferenceSettings = {
   model: model, method:'MCMC',
   // callbacks: [editor.MCMCProgress()],
   verbose: true,
-  samples: 20,
+  samples: 2000,
   lag: 10,
-  burn: 200
+  burn: 20000
 };
 
 var output = Infer(inferenceSettings)
-
-// viz.marginals(output)
 
 var maxap = (output.MAP().val)
 
@@ -178,4 +176,6 @@ return posts
 
 var predictions = map(function(i) {return {id: i.id, prediction: Math.exp(model_posterior(i).score("competitor"))} }, itemData)   
 
-predictions
+var out = {predictions: predictions, posteriors: output}
+
+out

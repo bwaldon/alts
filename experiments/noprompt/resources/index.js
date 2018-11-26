@@ -75,8 +75,12 @@ slides.instructions = slide({
     }
   });
 
+ slides.auth = slide({
+    name : "auth",
+  });
 
 slides.critical = slide({
+
     name : "img_select",
 
     /* trial information for this block
@@ -142,6 +146,7 @@ slides.critical = slide({
         "type" : this.stim.ref,
         "id" : this.stim.noun,
         "order" : order,
+        "kind" : this.stim.kind,
       });
     order = order + 1;
     },
@@ -201,7 +206,7 @@ function init() {
       screenUW: exp.width
     };
   //blocks of the experiment:
-  exp.structure=["i0", "consent", "instructions", "critical", 'subj_info', 'thanks'];
+  exp.structure=["auth","i0", "instructions", "critical", 'subj_info', 'thanks'];
 
   exp.data_trials = [];
   //make corresponding slides:
