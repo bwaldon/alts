@@ -106,10 +106,9 @@ var inferenceSettings = {
 
 var rsa_params = Infer(inferenceSettings)
 
-// RUN MODEL FORWARD SAMPLING FROM JOINT POSTERIOR OF PARAM VALUES
-
 var rsa_post = function(d) {
   
+// CHANGE THIS LINE TO SWITCH BETWEEN MAXIMUM A POSTERIORI VALUES AND SAMPLING FROM JOINT DISTIRBUTION
 //  var samp = sample(rsa_params)
   var samp = rsa_params.MAP().val
    
