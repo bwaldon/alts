@@ -1,8 +1,3 @@
-// var itemData = [
-//  {id: "baseball", competitor_prior: 0.5, observed_competitor: 0.55, target_nameability : 0.7, competitor_nameability : 0.3},
-//  {id: "cake", competitor_prior: 0.55, observed_competitor: 0.65, target_nameability : 0.9, competitor_nameability : 0.9},
-// ]
- 
 var statePrior = function(c) {
   return flip(c) ? "competitor" : "target"
 };

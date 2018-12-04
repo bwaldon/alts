@@ -1,0 +1,13 @@
+.slider {
+  /* default is width 400 and margin 10 */
+	width: 400;
+	margin: 10px;
+}
+
+img {
+   padding: 10px;
+}
+
+.slide {
+	padding: 50px;
+}

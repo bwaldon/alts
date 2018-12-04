@@ -5,6 +5,7 @@ library(ordinal)
 library(bootstrap)
 library(rwebppl)
 library(jsonlite)
+library(lme4)
 
 setwd("~/Documents/GitHub/symm_qp/results/pipeline_pilot_11122018")
 
@@ -22,6 +23,12 @@ ci.high <- function(x,na.rm=T) {
 d <- read.csv("results.csv")
 
 # RUN EXCLUSIONS
+
+# EXCLUDE NON-NATIVE ENGLISH SPEAKERS
+
+levels(d$language) # KEEP DATA IF LANGUAGE = SOME SPELLING VARIATION OF 'ENGLISH' (OR NA)
+
+# EXCLUDE PEOPLE WHO FAIL MORE THAN ONE EXCLUSION TRIAL
 
 to_exclude <- d %>%
   group_by(workerid, type, selection) %>%
@@ -80,15 +87,22 @@ d_filtered <- d %>%
   # ... THAT THE CONDITIONS SHARE IN COMMON
   filter(id %in% (d %>% filter(type == "looks like" & condition == "symmetric"))$id)
 
-m <- clmm(selection ~ condition + (1|workerid) + (1 + condition|id), link = "logit", data = d_filtered)
+# EXAMPLE: BINARY LOGISTIC REGRESSION BETWEEN CONTROL AND TARGET CONDITIONS
+
+m <- glmer(selection ~ condition + (1|workerid) + (1 + condition|id), family = "binomial", data = d_filtered %>% filter(condition %in% c("control","target")))
 
 summary(m)
+
+# EXPLORATORY ANALYSIS: LOOKING FOR ORDER EFFECTS
+
+m2 <- glmer(selection ~ condition + order + (1 + order|workerid) + (1 + order + condition|id), family = "binomial", data = d_filtered %>% filter(condition %in% c("control","target")))
+
+summary(m2)
 
 # BAYESIAN DATA ANALYSIS
 
 # LOAD & TRANSFORM DATA FROM NORMING STUDIES 
 
-# still have to exclude people...
 d_noprompt <- read.csv("results_noprompt.csv")
 
 noprompt_to_exclude <- d %>%
@@ -102,8 +116,7 @@ d_noprompt <- d_noprompt %>%
   filter(!(workerid %in% noprompt_to_exclude$workerid))
 
 d_noprompt <- d_noprompt %>%
-  # change for next run: condition is kind == "critical"
-  filter(type == "looks like") %>%
+  filter(kind == "critical") %>%
   group_by(id) %>%
   summarize(ntarget = sum(selection == "target"), 
             ncompetitor = sum(selection == "competitor"), 
@@ -118,7 +131,7 @@ d_naming <- d_naming %>%
             target_nameability = nknowtarget / sum(type == "target"),
             competitor_nameability = nknowcompetitor / sum(type == "competitor"))
 
-# MERGE TO MAIN STUDY DATA (E.G. DATA FROM SYMMETRIC CONDITION)
+# MERGE TO MAIN STUDY DATA FROM SYMMETRIC CONDITION
 
 symmetric_byitem <- d %>%
   filter(condition == "symmetric" & kind == "critical" & type == "looks like") %>% 
@@ -146,8 +159,31 @@ symmetric_predictions <- symmetric_bda$predictions
 
 symmetric_byitem <- merge(symmetric_byitem, symmetric_predictions, by = "id")
 
-ggplot(symmetric_byitem, aes(x=prediction, y=observed_competitor)) + geom_point()
+colnames(symmetric_byitem)[colnames(symmetric_byitem)=="prediction"] <- "rsa_prediction"
 
-with(symmetric_byitem, cor(prediction,observed_competitor))
+# DETERMINE CORRELATION OF MODEL PREDICTIONS AND OBSERVED DATA - ONE POINT FOR EVERY TRIAL OF THE EXPERIMENT
+
+# IGNORANCE-1 MODEL: PARTICIPANTS RESPOND AT CHANCE 
+
+symmetric_byitem$ig1_prediction <- 0.5
+
+ggplot(symmetric_byitem, aes(x=observed_competitor, y=ig1_prediction)) + geom_point()
+
+# IGNORANCE-2 MODEL: PARTICIPANTS RESPOND ACCORDING TO PRIOR EXPECTATIONS OF REFERENT 
+
+symmetric_byitem$ig2_prediction <- symmetric_byitem$competitor_prior
+
+ggplot(symmetric_byitem, aes(x=observed_competitor, y=ig2_prediction)) + geom_point()
+
+with(symmetric_byitem, cor(observed_competitor,ig2_prediction))
+
+# RSA MODEL:
+
+ggplot(symmetric_byitem, aes(x=observed_competitor, y=rsa_prediction)) + geom_point()
+
+with(symmetric_byitem, cor(observed_competitor,rsa_prediction))
+
+# GET POSTERIOR DISTRIBUTIONS OF PARAMETER VALUES FROM RSA MODEL, E.G. ALPHA PARAMETER AND COST OF "IS AN X" FROM SYMMETRIC CONDITION
 
 hist(symmetric_posteriors$alpha)
+hist(symmetric_posteriors$cost_istarget)
