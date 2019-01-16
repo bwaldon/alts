@@ -8,7 +8,7 @@ library(jsonlite)
 library(lme4)
 library(lsmeans)
 
-setwd("~/Documents/GitHub/symm_qp/results/full")
+setwd("~/Documents/GitHub/alts/results/Experiment3")
 
 # HELPER SCRIPTS
 
@@ -67,33 +67,6 @@ sel_counts_learning <- d %>%
             ncompetitor = sum(selection == "competitor"), 
             pcompetitor = ncompetitor / (ncompetitor + ntarget)) 
 
-
-# VISUALIZE RESULTS BY CONDITION
-
-dodge = position_dodge(.9)
-
-toplot <- function (data) {
-  output <- data %>% 
-   # group_by(condition,half) %>%
-    group_by(condition) %>%
-    summarize(Mean = mean(pcompetitor),CILow=ci.low(pcompetitor),CIHigh =ci.high(pcompetitor)) %>%
-    ungroup() %>%
-    mutate(Ymin=Mean-CILow,Ymax=Mean+CIHigh)
-  return(output)
-}
-
-plot_means <- function (toplot) {
-  ggplot(toplot, aes(x=condition,y=Mean)) +
-    # facet_wrap(~half) +
-    geom_bar(stat="identity",position = "dodge") +
-    theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
-    geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25, position = dodge) + 
-    labs(x = "Condition", y = "Proportion") +
-    ggtitle("Proportion of a competitor image chosen on 'looks like' trials\n(Experiment 3)")
-}
-
-plot_means(toplot(sel_counts))
-
 # LOGISTIC REGRESSION TO INVESTIGATE EFFECT OF CONDITION (MAX RANEF STRUCTURE)
 
 d$selection <- relevel(d$selection, ref = "target")
@@ -151,21 +124,138 @@ d_naming <- d_naming %>%
             target_nameability = nknowtarget / sum(type == "target"),
             competitor_nameability = nknowcompetitor / sum(type == "competitor"))
 
-# MERGE TO MAIN STUDY DATA FROM SYMMETRIC CONDITION
+# INFER PARAMS GLOBALLY
 
-symmetric_byitem <- d %>%
-  filter(condition == "symmetric" & kind == "critical" & type == "looks like") %>% 
-  group_by(id) %>%
-  summarize(ntarget = sum(selection == "target"), 
-            ncompetitor = sum(selection == "competitor"), 
-            observed_competitor = ncompetitor / (ncompetitor + ntarget))
+bda <- read_file("bda_inferglobalparams.txt")
 
-symmetric_byitem <- merge(symmetric_byitem, d_naming, by = "id")
-symmetric_byitem <- merge(symmetric_byitem, d_noprompt, by = "id")
-symmetric_byitem <- symmetric_byitem %>%
+d_total <- d %>%
+  filter(kind == "critical" & type == "looks like") %>% 
+  group_by(id,condition) %>%summarize(ntarget = sum(selection == "target"), 
+                  ncompetitor = sum(selection == "competitor"), 
+                  observed_competitor = ncompetitor / (ncompetitor + ntarget))
+
+d_total <- merge(d_total, d_naming, by = "id")
+d_total <- merge(d_total, d_noprompt, by = "id")
+d_total <- d_total %>%
   select(id,observed_competitor,competitor_prior,target_nameability,competitor_nameability)
 
-# VISUALIZATIONS 
+d_total_JSON <- toJSON(d_total)
+
+full_bda <- webppl(paste("var itemData = ", d_total_JSON, "\n", bda))
+
+full_posteriors <- (full_bda$posteriors)$support
+
+full_maxap <- (full_bda$maxap)
+
+write.csv(full_posteriors, file = "posteriors/posteriors_fulldata.csv")
+
+# INFER PARAMS BY CONDITION
+
+bda_bycondition <- read_file("bda_bycondition.txt")
+
+# GET BY-ITEM DATA BY CONDITION
+
+data_byitem <- function(cond, data) {
+  output <- data %>%
+    filter(condition == cond & kind == "critical" & type == "looks like") %>% 
+    group_by(id) %>%
+    summarize(ntarget = sum(selection == "target"), 
+              ncompetitor = sum(selection == "competitor"), 
+              observed_competitor = ncompetitor / (ncompetitor + ntarget))
+  output <- merge(output, d_naming, by = "id")
+  output <- merge(output, d_noprompt, by = "id")
+  output <- output %>%
+    select(id,observed_competitor,competitor_prior,target_nameability,competitor_nameability)
+}
+
+symmetric_byitem <-data_byitem("symmetric",d)
+control_byitem <-data_byitem("control",d)
+target_byitem <-data_byitem("target",d)
+nottarget_byitem <-data_byitem("nottarget",d)
+
+# INFER PARAMETERS: CONTROL CONDITION
+
+control_byitem_json <- toJSON(control_byitem)
+
+control_bda <- webppl(paste("var itemData = ", control_byitem_json, 
+                                        "\n var alpha =", full_maxap$alpha,
+                                        "\n", bda_bycondition))
+
+posteriors_control <- (control_bda$posteriors)$support
+
+write.csv(posteriors_control, file = "posteriors/posteriors_control.csv")
+
+# INFER PARAMETERS: TARGET CONDITION
+
+target_byitem_json <- toJSON(target_byitem)
+
+target_bda <- webppl(paste("var itemData = ", target_byitem_json, 
+                                        "\n var alpha =", full_maxap$alpha,
+                                        "\n", bda_bycondition))
+
+posteriors_target <- (target_bda$posteriors)$support
+
+write.csv(posteriors_target, file = "posteriors/posteriors_target.csv")
+
+# INFER PARAMETERS: NOT-TARGET CONDITION
+
+nottarget_byitem_json <- toJSON(nottarget_byitem)
+
+nottarget_bda <- webppl(paste("var itemData = ", nottarget_byitem_json, 
+                                      "\n var alpha =", full_maxap$alpha,
+                                      "\n", bda_bycondition))
+
+posteriors_nottarget <- (nottarget_bda$posteriors)$support
+
+write.csv(posteriors_nottarget, file = "posteriors/posteriors_nottarget.csv")
+
+# INFER PARAMETERS: SYMMETRIC CONDITION
+
+symmetric_byitem_json <- toJSON(symmetric_byitem)
+
+symmetric_bda <- webppl(paste("var itemData = ", symmetric_byitem_json, 
+                                        "\n var alpha =", full_maxap$alpha,
+                                        "\n", bda_bycondition))
+
+posteriors_symmetric <- (symmetric_bda$posteriors)$support
+
+write.csv(posteriors_symmetric, file = "posteriors/posteriors_symmetric.csv")
+
+# NEW VISUALIZATIONS
+
+full_posteriors <- read.csv("posteriors/posteriors_fulldataset.csv")
+posteriors_control <- read.csv("posteriors/posteriors_control.csv")
+posteriors_target <- read.csv("posteriors/posteriors_target.csv")
+posteriors_nottarget <- read.csv("posteriors/posteriors_nottarget.csv")
+posteriors_symmetric <- read.csv("posteriors/posteriors_symmetric.csv")
+
+# BY-CONDITION VISUALIZATIONS
+
+dodge = position_dodge(.9)
+
+toplot <- function (data) {
+  output <- data %>% 
+    # group_by(condition,half) %>%
+    group_by(condition) %>%
+    summarize(Mean = mean(pcompetitor),CILow=ci.low(pcompetitor),CIHigh =ci.high(pcompetitor)) %>%
+    ungroup() %>%
+    mutate(Ymin=Mean-CILow,Ymax=Mean+CIHigh)
+  return(output)
+}
+
+plot_means <- function (toplot) {
+  ggplot(toplot, aes(x=condition,y=Mean)) +
+    # facet_wrap(~half) +
+    geom_bar(stat="identity",position = "dodge") +
+    theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
+    geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25, position = dodge) + 
+    labs(x = "Condition", y = "Proportion")  # +
+  # ggtitle("Proportion of a competitor image chosen on 'looks like' trials\n(Experiment 3)")
+}
+
+plot_means(toplot(sel_counts))
+
+# BY-ITEM VISUALIZATIONS 
 
 byitem <- d %>%
   filter(kind == "critical" & type == "looks like") %>% 
@@ -187,103 +277,100 @@ ggplot(byitem, aes(x=condition, y=observed_competitor)) +
   facet_wrap(~id)+
   geom_point() + 
   labs(x = "Condition", y = "Proportion") +
-  ggtitle("Proportion of a competitor image chosen on 'looks like' trials\n(By item, Experiment 3)") +
+  # ggtitle("Proportion of a competitor image chosen on 'looks like' trials\n(By item, Experiment 3)") +
   theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1))
 
-# ANALYZE 
+# ALPHA PARAMETER GLOBAL DIST
 
-bda <- read_file("bda.txt")
+ggplot(full_posteriors, aes(alpha)) + geom_density(alpha = 0.2) +
+  labs(x = "Inferred alpha parameter value", y = "Density") # +
+# ggtitle("Posterior distribution of alpha parameter values\n(Experiment 3)") 
 
-symmetric_byitem_json <- toJSON(symmetric_byitem)
+# VISUALIZE POSTERIOR PARAMS BY CONDITION 
 
-symmetric_bda <- webppl(paste("var itemData = ", symmetric_byitem_json, "\n", bda))
+vizparams_bycondition <- function(posteriors) {
+  toplot <- posteriors %>% 
+    select(cost_is,cost_lookslike,cost_not) %>%
+    gather(key = "parameter", value = "cost")
+  ggplot(toplot, aes(cost, fill = parameter)) + geom_density(alpha = 0.2) +
+    labs(x = "Inferred value", y = "Density")
+}
 
-symmetric_posteriors <- (symmetric_bda$posteriors)$support
+vizparams_bycondition(posteriors_control)
+vizparams_bycondition(posteriors_target)
+vizparams_bycondition(posteriors_nottarget)
+vizparams_bycondition(posteriors_symmetric)
 
-symmetric_predictions <- symmetric_bda$predictions
+# VISUALIZE POSTERIOR PREDICTIVES BY CONDITION 
 
-symmetric_byitem <- merge(symmetric_byitem, symmetric_predictions, by = "id")
+View(symmetric_bda$predictions)
 
-colnames(symmetric_byitem)[colnames(symmetric_byitem)=="prediction"] <- "rsa_prediction"
+predictive_plot <- function(bda, data) {
+  predictions <- bda$predictions
+  observations <- data$observed_competitor
+  toplot <- cbind(predictions, observations)
+  colnames(toplot) <- c("id","prediction","observation")
+  ggplot(toplot, aes(x=prediction, y=observation)) + geom_point() 
+}
 
-# MERGE TO MAIN STUDY DATA FROM CONTROL CONDITION
+predictive_plot(symmetric_bda, symmetric_byitem)
+predictive_plot(target_bda, target_byitem)
+predictive_plot(nottarget_bda, nottarget_byitem)
+predictive_plot(control_bda, control_byitem)
 
-control_byitem <- d %>%
-  filter(condition == "control" & kind == "critical" & type == "looks like") %>% 
-  group_by(id) %>%
-  summarize(ntarget = sum(selection == "target"), 
-            ncompetitor = sum(selection == "competitor"), 
-            observed_competitor = ncompetitor / (ncompetitor + ntarget))
+# EXPLORATORY ANALYSIS: CATEGORICAL COST 
 
-control_byitem <- merge(control_byitem, d_naming, by = "id")
-control_byitem <- merge(control_byitem, d_noprompt, by = "id")
-control_byitem <- control_byitem %>%
-  select(id,observed_competitor,competitor_prior,target_nameability,competitor_nameability)
+# INFER PARAMETERS: CONTROL CONDITION
 
-control_byitem_json <- toJSON(control_byitem)
+bda_categcost <- read_file("bda_bycondition_categcost.txt")
 
-control_bda <- webppl(paste("var itemData = ", control_byitem_json, "\n", bda))
+control_bda_categcost <- webppl(paste("var itemData = ", control_byitem_json, 
+                            "\n var alpha =", full_maxap$alpha,
+                            "\n", bda_categcost))
 
-# MERGE TO MAIN STUDY DATA FROM TARGET CONDITION
+posteriors_control_categcost <- cbind((control_bda_categcost$posteriors)$support, (control_bda_categcost$posteriors)$probs)
 
-target_byitem <- d %>%
-  filter(condition == "target" & kind == "critical" & type == "looks like") %>% 
-  group_by(id) %>%
-  summarize(ntarget = sum(selection == "target"), 
-            ncompetitor = sum(selection == "competitor"), 
-            observed_competitor = ncompetitor / (ncompetitor + ntarget))
+write.csv(posteriors_control_categcost, file = "posteriors/posteriors_control_categcost.csv")
 
-target_byitem <- merge(target_byitem, d_naming, by = "id")
-target_byitem <- merge(target_byitem, d_noprompt, by = "id")
-target_byitem <- target_byitem %>%
-  select(id,observed_competitor,competitor_prior,target_nameability,competitor_nameability)
+# INFER PARAMETERS: TARGET CONDITION
 
-target_byitem_json <- toJSON(target_byitem)
+target_bda_categcost <- webppl(paste("var itemData = ", target_byitem_json, 
+                           "\n var alpha =", full_maxap$alpha,
+                           "\n", bda_categcost))
 
-target_bda <- webppl(paste("var itemData = ", target_byitem_json, "\n", bda))
+posteriors_target_categcost <- cbind((target_bda_categcost$posteriors)$support, (target_bda_categcost$posteriors)$probs)
 
-# MERGE TO MAIN STUDY DATA FROM NOT-TARGET CONDITION
+write.csv(posteriors_target_categcost, file = "posteriors/posteriors_target_categcost.csv")
 
-nottarget_byitem <- d %>%
-  filter(condition == "nottarget" & kind == "critical" & type == "looks like") %>% 
-  group_by(id) %>%
-  summarize(ntarget = sum(selection == "target"), 
-            ncompetitor = sum(selection == "competitor"), 
-            observed_competitor = ncompetitor / (ncompetitor + ntarget))
+# INFER PARAMETERS: NOT-TARGET CONDITION
 
-nottarget_byitem <- merge(nottarget_byitem, d_naming, by = "id")
-nottarget_byitem <- merge(nottarget_byitem, d_noprompt, by = "id")
-nottarget_byitem <- nottarget_byitem %>%
-  select(id,observed_competitor,competitor_prior,target_nameability,competitor_nameability)
+nottarget_bda_categcost <- webppl(paste("var itemData = ", nottarget_byitem_json, 
+                              "\n var alpha =", full_maxap$alpha,
+                              "\n", bda_categcost))
 
-nottarget_byitem_json <- toJSON(nottarget_byitem)
+posteriors_nottarget_categcost <- cbind((nottarget_bda_categcost$posteriors)$support, (nottarget_bda_categcost$posteriors)$probs)
 
-nottarget_bda <- webppl(paste("var itemData = ", nottarget_byitem_json, "\n", bda))
+write.csv(posteriors_nottarget_categcost, file = "posteriors/posteriors_nottarget_categcost.csv")
 
-# GET POSTERIOR DISTRIBUTIONS OF PARAMETER VALUES FROM RSA MODEL, E.G. ALPHA PARAMETER AND COST OF "IS AN X" FROM SYMMETRIC CONDITION
+# INFER PARAMETERS: SYMMETRIC CONDITION
 
-symmetric_posteriors <- (symmetric_bda$posteriors)$support
-control_posteriors <- (control_bda$posteriors)$support
-target_posteriors <- (target_bda$posteriors)$support
-nottarget_posteriors <- (nottarget_bda$posteriors)$support
+symmetric_bda_categcost <- webppl(paste("var itemData = ", symmetric_byitem_json, 
+                              "\n var alpha =", full_maxap$alpha,
+                              "\n", bda_categcost))
 
-symmetric_posteriors$condition <- "symmetric"
-control_posteriors$condition <- "control"
-target_posteriors$condition <- "target"
-nottarget_posteriors$condition <- "nottarget"
+posteriors_symmetric_categcost <- cbind((symmetric_bda_categcost$posteriors)$support, (symmetric_bda_categcost$posteriors)$probs)
 
-dat <- rbind(symmetric_posteriors, control_posteriors, target_posteriors, nottarget_posteriors)
+write.csv(posteriors_symmetric_categcost, file = "posteriors/posteriors_symmetric_categcost.csv")
 
-ggplot(dat, aes(alpha, fill = condition)) + geom_density(alpha = 0.2) +
-  labs(x = "Inferred alpha parameter value", y = "Density") +
-  ggtitle("Posterior distribution of alpha parameter values\n(Experiment 3)") 
-ggplot(dat, aes(cost_istarget, fill = condition)) + geom_density(alpha = 0.2) +
-  labs(x = "Inferred cost of 'It's a [target]'", y = "Density") +
-  ggtitle("Posterior distribution of cost values for 'It's a [target]'\n(Experiment 3)") 
-ggplot(dat, aes(cost_nottarget, fill = condition)) + geom_density(alpha = 0.2) +
-  labs(x = "Inferred cost of 'It's not a [target]'", y = "Density") +
-  ggtitle("Posterior distribution of cost values for 'It's not a [target]'\n(Experiment 3)") 
-ggplot(dat, aes(cost_looksliketarget, fill = condition)) + geom_density(alpha = 0.2) +
-  labs(x = "Inferred cost of 'It looks like a [target]'", y = "Density") +
-  ggtitle("Posterior distribution of cost values for 'It looks like a [target]'\n(Experiment 3)") 
+vizparams_bycondition_categcost <- function(posteriors) {
+  toplot <- posteriors %>% 
+    select(cost_is,cost_lookslike,cost_not) %>%
+    gather(key = "parameter", value = "cost")
+  ggplot(toplot, aes(cost, fill = parameter)) + geom_bar() +
+    labs(x = "Inferred value", y = "Density")
+}
 
+vizparams_bycondition_categcost(posteriors_control_categcost)
+vizparams_bycondition(posteriors_target_categcost)
+vizparams_bycondition(posteriors_nottarget_categcost)
+vizparams_bycondition(posteriors_symmetric_categcost)

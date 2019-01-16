@@ -1,0 +1,52 @@
+var states = [['s'],['s','a']]
+
+var statePrior = function() {return uniformDraw(states);};
+
+var utterances = ["some", "all"];
+
+var cost = {
+  "some": 1,
+  "all": 1,
+};
+
+var utterancePrior = function() {
+  var uttProbs = map(function(u) {return Math.exp(-cost[u]) }, utterances);
+  return categorical(uttProbs, utterances);
+};
+
+var literalMeanings = {
+  all: function(state) { return state.includes("a"); },
+  some: function(state) { return state.includes("s"); },
+};
+
+var literalListener = cache(function(utt) {
+  return Infer({model: function(){
+    var state = statePrior()
+    var meaning = literalMeanings[utt]
+    condition(meaning(state))
+    return state
+  }})
+});
+
+// set speaker optimality
+var alpha = 1
+
+// pragmatic speaker
+var speaker = cache(function(state) {
+  return Infer({model: function(){
+    var utt = utterancePrior()
+    factor(alpha * literalListener(utt).score(state))
+    return utt
+  }})
+});
+
+// pragmatic listener
+var pragmaticListener = cache(function(utt) {
+  return Infer({model: function(){
+    var state = statePrior()
+    observe(speaker(state),utt)
+    return state
+  }})
+});
+
+viz.table(pragmaticListener("some"));

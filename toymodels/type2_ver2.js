@@ -1,13 +1,13 @@
-var statePrior = function() {
-  return categorical({ps: [0.33,0.33,0.33], vs: [["X"], ["Y"],["X","Y"]]});
-};
+var states = [['s'],['s','a']]
 
-var utterances = ["or", "eitheror","and"];
+var statePrior = function() {return uniformDraw(states);};
+
+var utterances = ["some", "all", "somenotall"];
 
 var cost = {
-  "or": 1,
-  "eitheror": 1,
-  "and": 1,
+  "some": 1,
+  "all": 1,
+  "somenotall" : 1
 };
 
 var utterancePrior = function() {
@@ -16,9 +16,9 @@ var utterancePrior = function() {
 };
 
 var literalMeanings = {
-  and: function(state) { return state.includes("X") && state.includes("Y"); },
-  or: function(state) { return state.includes("X") || state.includes("Y"); },
-  eitheror: function(state) { return (state.includes("X") || state.includes("Y")) && !(state.includes("X") && state.includes("Y")); },
+  all: function(state) { return state.includes("a"); },
+  some: function(state) { return state.includes("s"); },
+  somenotall: function(state) {return state.includes("s") && !(state.includes("a"))}
 };
 
 var literalListener = cache(function(utt) {
@@ -51,4 +51,4 @@ var pragmaticListener = cache(function(utt) {
   }})
 });
 
-viz.table(pragmaticListener("or"));
+viz.table(pragmaticListener("some"));

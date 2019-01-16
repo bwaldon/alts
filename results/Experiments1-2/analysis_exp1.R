@@ -4,6 +4,7 @@ library(formatR)
 library(reshape)
 library(lme4)
 library(lmerTest)
+library(lsmeans)
 
 # HELPERS
 
@@ -74,7 +75,20 @@ fillTheBlanks <- function(x, missing="na"){
 
 exp1$primetype <- fillTheBlanks(exp1$primetype)
 
-# BY CONDITION MEANS, EXP1 
+# BY CONDITION MEANS, EXP1  
+
+# order scales by overall mean response
+
+scale_means <- exp1 %>% 
+  filter(type == "crit") %>%
+  group_by(target) %>%
+  summarize(mean = mean(response)) %>%
+  arrange(mean)
+
+exp1_rl <- exp1 %>% 
+  mutate(target = relevel(target, "some"))
+
+exp1$target <- factor(exp1$target, levels = scale_means$target)
 
 dodge = position_dodge(.9)
 
@@ -90,12 +104,11 @@ toplot <- function (data) {
 
 plot_means <- function (toplot) {
   ggplot(toplot, aes(x=primetype,y=Mean)) +
-    facet_wrap(~target) +
+    facet_wrap(~target, nrow = 1) +
     geom_bar(stat="identity",position = "dodge") +
     theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
     geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25, position = dodge) + 
-    labs(x = "Condition", y = "Interpretation\n(100 = maximum exhaustivity inference)") +
-    ggtitle("Strength of exhaustivity interpretations by priming condition\n(Experiment 1)") +
+    labs(x = "Condition", y = "Mean interpretation rating") +
     scale_x_discrete(labels=c("No-prime", "Prime"))
 }
 
@@ -103,9 +116,37 @@ plot_means(toplot(exp1))
 
 # LINEAR REGRESSION ANALYSIS
 
+# OLD REGRESSION ANALYSIS
+
 m_exp1 <- lmer(response ~ primetype * target + (primetype|workerid), data = exp1 %>% filter(type == "crit"))
 
 summary(m_exp1)
+
+# NEW ANALYSIS WITH CENTERED PRIMETYPE VARIABLE, NEW REF FOR TARGET (I.E. SCALE)
+
+myCenter= function(x) {
+  if (is.numeric(x)) { return(x - mean(x, na.rm=T)) }
+  if (is.factor(x)) {
+    x= as.numeric(x)
+    return(x - mean(x, na.rm=T))
+  }
+  if (is.data.frame(x) || is.matrix(x)) {
+    m= matrix(nrow=nrow(x), ncol=ncol(x))
+    colnames(m)= paste("c", colnames(x), sep="")
+    for (i in 1:ncol(x)) {
+      m[,i]= myCenter(x[,i])
+    }
+    return(as.data.frame(m))
+  }
+}
+
+exp1$primetype_centered <- myCenter(factor(exp1$primetype))
+
+m_exp1_c <- lmer(response ~ primetype_centered * target + (primetype_centered|workerid), data = exp1_rl %>% filter(type == "crit"))
+
+summary(m_exp1_c)
+
+lsmeans(m_exp1_c, revpairwise~primetype_centered * target)
 
 # BY-SUBJECT VARIABILITY 
 
@@ -141,8 +182,8 @@ plot_subjectvar <- function(subjectvar, subjectvar_bysubject) {
     theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
     geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25) +  
     geom_point(data = subjectvar_bysubject) +
-    ggtitle("By-subject change in behavior between priming and critical trials\n(Experiment 1)") +
-    labs(x = "Trial type", y = "Interpretation\n(100 = maximum exhaustivity inference)") +
+    # ggtitle("By-subject change in behavior between priming and critical trials\n(Experiment 1)") +
+    labs(x = "Trial type", y = "Mean interpretation rating") +
     scale_x_discrete(labels=c("Priming trials", "Critical trial"))
 }
 
@@ -177,8 +218,8 @@ plot_means_byitem <- function (toplot) {
     geom_bar(stat="identity", position=dodge) +
     theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
     geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25,position=dodge) + 
-    labs(x = "Trial type", y = "Interpretation\n(100 = maximum exhaustivity inference)") +
-    ggtitle("Change in behavior from prime to critical trials\n(Experiment 1)") +
+    labs(x = "Trial type", y = "Mean interpretation rating") +
+    # ggtitle("Change in behavior from prime to critical trials\n(Experiment 1)") +
     scale_fill_discrete(name="Condition",
                         labels=c("No-prime", "Prime"))
 }

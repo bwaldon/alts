@@ -84,6 +84,16 @@ exp2$primetype <- fillTheBlanks(exp2$primetype)
 
 # BY CONDITION MEANS, EXP2
 
+# order scales by overall mean response
+
+scale_means <- exp2 %>% 
+  filter(type == "crit") %>%
+  group_by(target) %>%
+  summarize(mean = mean(response)) %>%
+  arrange(mean)
+
+exp2$target <- factor(exp2$target, levels = scale_means$target)
+
 dodge = position_dodge(.9)
 
 toplot <- function (data) {
@@ -98,12 +108,12 @@ toplot <- function (data) {
 
 plot_means <- function (toplot) {
   ggplot(toplot, aes(x=primetype,y=Mean)) +
-    facet_wrap(~target) +
+    facet_wrap(~target, nrow = 1) +
     geom_bar(stat="identity",position = "dodge") +
     theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
     geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25, position = dodge) + 
-    labs(x = "Condition", y = "Interpretation\n(100 = maximum exhaustivity inference)") +
-    ggtitle("Strength of exhaustivity interpretations by priming condition\n(Experiment 2)") +
+    labs(x = "Condition", y = "Mean interpretation rating") +
+   # ggtitle("Strength of exhaustivity interpretations by priming condition\n(Experiment 2)") +
     scale_x_discrete(labels=c("No-prime", "Prime"))
 }
 
@@ -111,11 +121,40 @@ plot_means(toplot(exp2))
 
 # LINEAR REGRESSION ANALYSIS
 
+# OLD ANALYSIS
+
 exp2$primetype <- relevel(factor(exp2$primetype), ref = "no")
 
 m_exp2 <- lmer(response ~ primetype * target + (primetype|workerid), data = exp2 %>% filter(type == "crit"))
 
 summary(m_exp2)
+
+# NEW ANALYSIS WITH CENTERED PRIMETYPE VARIABLE, NEW REF FOR TARGET (I.E. SCALE)
+
+myCenter= function(x) {
+  if (is.numeric(x)) { return(x - mean(x, na.rm=T)) }
+  if (is.factor(x)) {
+    x= as.numeric(x)
+    return(x - mean(x, na.rm=T))
+  }
+  if (is.data.frame(x) || is.matrix(x)) {
+    m= matrix(nrow=nrow(x), ncol=ncol(x))
+    colnames(m)= paste("c", colnames(x), sep="")
+    for (i in 1:ncol(x)) {
+      m[,i]= myCenter(x[,i])
+    }
+    return(as.data.frame(m))
+  }
+}
+
+
+exp2$primetype_centered <- myCenter(factor(exp2$primetype))
+
+m_exp2_c <- lmer(response ~ primetype_centered * target + (primetype_centered|workerid), data = exp2 %>% filter(type == "crit"))
+
+summary(m_exp2_c)
+
+lsmeans(m_exp2_c, revpairwise~target)
 
 # VISUALIZATIONS 
 
@@ -153,8 +192,8 @@ plot_subjectvar <- function(subjectvar, subjectvar_bysubject) {
     theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
     geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25) +  
     geom_point(data = subjectvar_bysubject) +
-    ggtitle("By-subject change in behavior between priming and critical trials\n(Experiment 2)") +
-    labs(x = "Trial type", y = "Interpretation\n(100 = maximum exhaustivity inference)") +
+   # ggtitle("By-subject change in behavior between priming and critical trials\n(Experiment 2)") +
+    labs(x = "Trial type", y = "Mean interpretation rating") +
     scale_x_discrete(labels=c("Priming trials", "Critical trial"))
 }
 
@@ -189,8 +228,8 @@ plot_means_byitem <- function (toplot) {
     geom_bar(stat="identity", position=dodge) +
     theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
     geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25,position=dodge) + 
-    labs(x = "Trial type", y = "Interpretation\n(100 = maximum exhaustivity inference)") +
-    ggtitle("Change in behavior from prime to critical trials\n(Experiment 2)") +
+    labs(x = "Trial type", y = "Mean interpretation rating") +
+   # ggtitle("Change in behavior from prime to critical trials\n(Experiment 2)") +
     scale_fill_discrete(name="Condition",
                         labels=c("No-prime", "Prime"))
 }
@@ -203,6 +242,8 @@ df <- rbind(exp1, exp2)
 
 df <- df %>% 
   filter(!(primetype == "no"))
+
+df$primetype <- relevel(factor(df$primetype),ref = "str")
   
 plot_means_compare <- function (toplot) {
   ggplot(toplot, aes(x=primetype,y=Mean)) +
@@ -210,8 +251,8 @@ plot_means_compare <- function (toplot) {
     geom_bar(stat="identity",position = "dodge") +
     theme(axis.text.x=element_text(angle=20,hjust=1,vjust=1)) +
     geom_errorbar(aes(ymin=Ymin,ymax=Ymax),width=.25, position = dodge) + 
-    labs(x = "Experiment", y = "Interpretation\n(100 = maximum exhaustivity inference)") +
-    ggtitle("Comparison of behavior on critical trials (Experiments 1 and 2)") +
+    labs(x = "Experiment", y = "Mean interpretation rating") +
+   # ggtitle("Comparison of behavior on critical trials (Experiments 1 and 2)") +
     scale_x_discrete(labels=c("Experiment 1", "Experiment 2"))
 }
 
@@ -219,6 +260,12 @@ plot_means_compare(toplot(df))
 
 df$primetype <- relevel(factor(df$primetype), ref = "str")
 
-m_exp1and2 <- lmer(response ~ primetype * target + (primetype|workerid), data = df %>% filter(type == "crit"))
+df$primetype_centered <- as.factor(df$primetype)
+
+#needs to change, 0.5 is only a rough approximation
+
+levels(df$primetype_centered) <- c(-0.5, 0.5)
+
+m_exp1and2 <- lmer(response ~ primetype_centered * target + (primetype_centered|workerid), data = df %>% filter(type == "crit"))
 
 summary(m_exp1and2)
