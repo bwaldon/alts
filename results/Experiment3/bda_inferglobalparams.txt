@@ -71,7 +71,7 @@ var f = function(d) {
 
 var predicted_competitor = Math.abs(Math.exp(posts.score(["competitor"])))
 
-observe(Gaussian({mu: predicted_competitor, sigma: 0.05}), d.observed_competitor)
+observe(Gaussian({mu: predicted_competitor, sigma: 0.0005}), d.observed_competitor)
 }
 
 map(f, itemData)

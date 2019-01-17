@@ -85,10 +85,7 @@ scale_means <- exp1 %>%
   summarize(mean = mean(response)) %>%
   arrange(mean)
 
-exp1_rl <- exp1 %>% 
-  mutate(target = relevel(target, "some"))
-
-exp1$target <- factor(exp1$target, levels = scale_means$target)
+exp1$target <- relevel(exp1$target, ref = "some")
 
 dodge = position_dodge(.9)
 
@@ -142,7 +139,7 @@ myCenter= function(x) {
 
 exp1$primetype_centered <- myCenter(factor(exp1$primetype))
 
-m_exp1_c <- lmer(response ~ primetype_centered * target + (primetype_centered|workerid), data = exp1_rl %>% filter(type == "crit"))
+m_exp1_c <- lmer(response ~ primetype_centered * target + (primetype_centered|workerid), data = exp1 %>% filter(type == "crit"))
 
 summary(m_exp1_c)
 

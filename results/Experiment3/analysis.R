@@ -223,12 +223,6 @@ write.csv(posteriors_symmetric, file = "posteriors/posteriors_symmetric.csv")
 
 # NEW VISUALIZATIONS
 
-full_posteriors <- read.csv("posteriors/posteriors_fulldataset.csv")
-posteriors_control <- read.csv("posteriors/posteriors_control.csv")
-posteriors_target <- read.csv("posteriors/posteriors_target.csv")
-posteriors_nottarget <- read.csv("posteriors/posteriors_nottarget.csv")
-posteriors_symmetric <- read.csv("posteriors/posteriors_symmetric.csv")
-
 # BY-CONDITION VISUALIZATIONS
 
 dodge = position_dodge(.9)
@@ -303,14 +297,13 @@ vizparams_bycondition(posteriors_symmetric)
 
 # VISUALIZE POSTERIOR PREDICTIVES BY CONDITION 
 
-View(symmetric_bda$predictions)
-
 predictive_plot <- function(bda, data) {
   predictions <- bda$predictions
   observations <- data$observed_competitor
   toplot <- cbind(predictions, observations)
   colnames(toplot) <- c("id","prediction","observation")
-  ggplot(toplot, aes(x=prediction, y=observation)) + geom_point() 
+  ggplot(toplot, aes(x=prediction, y=observation)) + geom_point() +
+    labs(x = "Predicted proportion of competitor chosen", y = "Observed proportion of competitor chosen")
 }
 
 predictive_plot(symmetric_bda, symmetric_byitem)
@@ -374,3 +367,11 @@ vizparams_bycondition_categcost(posteriors_control_categcost)
 vizparams_bycondition(posteriors_target_categcost)
 vizparams_bycondition(posteriors_nottarget_categcost)
 vizparams_bycondition(posteriors_symmetric_categcost)
+
+
+full_posteriors <- read.csv("posteriors/posteriors_fulldata.csv")
+posteriors_control <- read.csv("posteriors/posteriors_control.csv")
+posteriors_target <- read.csv("posteriors/posteriors_target.csv")
+posteriors_nottarget <- read.csv("posteriors/posteriors_nottarget.csv")
+posteriors_symmetric <- read.csv("posteriors/posteriors_symmetric.csv")
+

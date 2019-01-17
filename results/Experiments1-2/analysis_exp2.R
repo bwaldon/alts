@@ -55,7 +55,7 @@ exp2[exp2$id %in% c("low_right1","low_right2","low_right3"),]$correct <- "low"
 
 exp2$response <- as.numeric(exp2$response)
 
-# 3 people need to be excluded by virtue of failing one or more control trials
+# eleven people need to be excluded by virtue of failing more than one control trials
 
 d_excl_exp2 <- exp2 %>%
   group_by(workerid, id, correct) %>%
@@ -69,7 +69,7 @@ exp2 <- exp2 %>%
   filter(!(workerid %in% d_excl_exp2$workerid)) %>%
   filter(type %in% c("prime","crit"))
 
-length(unique(exp2$workerid)) # should now be 102
+length(unique(exp2$workerid)) # should now be 94
 
 # NASTY DATA TRANSFORMING...
 
@@ -123,13 +123,16 @@ plot_means(toplot(exp2))
 
 # OLD ANALYSIS
 
-exp2$primetype <- relevel(factor(exp2$primetype), ref = "no")
+
 
 m_exp2 <- lmer(response ~ primetype * target + (primetype|workerid), data = exp2 %>% filter(type == "crit"))
 
 summary(m_exp2)
 
 # NEW ANALYSIS WITH CENTERED PRIMETYPE VARIABLE, NEW REF FOR TARGET (I.E. SCALE)
+
+exp2$primetype <- relevel(factor(exp2$primetype), ref = "no")
+exp2$target <- relevel(exp2$target, ref = "some")
 
 myCenter= function(x) {
   if (is.numeric(x)) { return(x - mean(x, na.rm=T)) }
@@ -146,7 +149,6 @@ myCenter= function(x) {
     return(as.data.frame(m))
   }
 }
-
 
 exp2$primetype_centered <- myCenter(factor(exp2$primetype))
 
@@ -260,12 +262,8 @@ plot_means_compare(toplot(df))
 
 df$primetype <- relevel(factor(df$primetype), ref = "str")
 
-df$primetype_centered <- as.factor(df$primetype)
+df$primetype_centered <- myCenter(df$primetype)
 
-#needs to change, 0.5 is only a rough approximation
-
-levels(df$primetype_centered) <- c(-0.5, 0.5)
-
-m_exp1and2 <- lmer(response ~ primetype_centered * target + (primetype_centered|workerid), data = df %>% filter(type == "crit"))
+m_exp1and2 <- lmer(response ~ primetype_centered * target + (1|workerid), data = df %>% filter(type == "crit"))
 
 summary(m_exp1and2)
