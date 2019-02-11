@@ -1,0 +1,91 @@
+var utterancePrior = function(item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor) {
+  var uttProbs = map(function(u) {return Math.exp(-cost(item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor)[u]) }, utterances);
+  return categorical(uttProbs, utterances);
+};
+
+var literalMeanings = {
+  looksliketarget: function(state) { return state == "target" || state == "competitor"; },
+  istarget: function(state) { return state == "target"; },
+  nottarget: function(state) {return state == "competitor";  },
+  lookslikecompetitor: function(state) { return state == "target" || state == "competitor"; },
+  iscompetitor: function(state) { return state == "competitor"; },
+  notcompetitor: function(state) {return state == "target";  },
+};
+
+var literalListener = cache(function(utt) {
+  return Infer({model: function(){
+    var state = statePrior()
+    var meaning = literalMeanings[utt]
+    condition(meaning(state))
+    return state
+  }})
+});
+
+var speaker = cache(function(state,item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor,alpha) {
+  return Infer({model: function(){
+    var utt = utterancePrior(item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor)
+    factor(alpha * literalListener(utt).score(state))
+    return utt
+  }})
+});
+
+// pragmatic listener
+  
+var pragmaticListener = cache(function(item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor,alpha) {
+  return Infer({model: function(){
+    var state = statePrior(item.competitor_prior)
+    observe(speaker(state,item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor,alpha),"looksliketarget")
+    return state
+  }})
+});
+
+// speaker("target",itemData[0],1,1,1)
+// pragmaticListener(itemData[0],10,1,1)
+
+var dataAnalysis2 = function(){
+  // prior over model parameter
+ var cost_looksliketarget = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_istarget = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_nottarget = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_lookslikecompetitor = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_iscompetitor = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_notcompetitor = uniformDrift({a: 0, b: 5, w: 1})
+ var alpha = uniformDrift({a: 0, b: 5, w: 1})
+  mapData({data: itemData}, function(d) {
+    var prediction = Math.exp(pragmaticListener(d,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor,alpha).score("competitor"))
+    observe(Gaussian({mu: prediction, sigma: 0.1}), d.observed_competitor)
+  })
+  return {cost_istarget: cost_istarget,
+         cost_nottarget: cost_nottarget,
+         cost_looksliketarget: cost_looksliketarget,
+         cost_iscompetitor: cost_iscompetitor,
+         cost_notcompetitor: cost_notcompetitor,
+         cost_lookslikecompetitor: cost_lookslikecompetitor,
+      	 alpha: alpha};
+}
+
+var posterior_samples = Infer({
+  method: "MCMC",
+  samples: 100,   // how many samples to obtain
+  burn: 1000,     // number of steps for algorithm to adapt
+  lag: 10,
+  verbose: true,
+  //callbacks: [editor.MCMCProgress()],
+  model: dataAnalysis2})
+
+// viz.marginals(posterior_samples)
+
+var maxap = posterior_samples.MAP().val
+                   
+var predictions = map(function(i) { return {id: i.id, 
+                                           prediction: Math.exp(pragmaticListener(i, maxap.cost_istarget, maxap.cost_nottarget, 
+                                                                                  maxap.cost_looksliketarget, 
+                                                                                  maxap.cost_iscompetitor,
+                                                                                  maxap.cost_notcompetitor,
+                                                                                  maxap.cost_lookslikecompetitor,
+                                                                                  maxap.alpha).score("competitor")) 
+                                          } } , itemData)
+
+var out = {posteriors: posterior_samples, predictions: predictions, maxap: maxap}
+
+out

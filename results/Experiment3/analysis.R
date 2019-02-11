@@ -6,6 +6,7 @@ library(bootstrap)
 library(rwebppl)
 library(jsonlite)
 library(lme4)
+library(lmerTest)
 library(lsmeans)
 
 setwd("~/Documents/GitHub/alts/results/Experiment3")
@@ -126,7 +127,8 @@ d_naming <- d_naming %>%
 
 # INFER PARAMS GLOBALLY
 
-bda <- read_file("bda_inferglobalparams.txt")
+bda <- read_file("bda_inferglobal_6cost.txt")
+# bda <- read_file("bda_inferglobal_3cost.txt")
 
 d_total <- d %>%
   filter(kind == "critical" & type == "looks like") %>% 
@@ -147,11 +149,12 @@ full_posteriors <- (full_bda$posteriors)$support
 
 full_maxap <- (full_bda$maxap)
 
-write.csv(full_posteriors, file = "posteriors/posteriors_fulldata.csv")
+# write.csv(full_posteriors, file = "posteriors/posteriors_fulldata.csv")
 
 # INFER PARAMS BY CONDITION
 
-bda_bycondition <- read_file("bda_bycondition.txt")
+# bda_bycondition <- read_file("bda_bycondition_6cost.txt")
+bda_bycondition <- read_file("bda_bycondition_3cost.txt")
 
 # GET BY-ITEM DATA BY CONDITION
 
@@ -183,7 +186,7 @@ control_bda <- webppl(paste("var itemData = ", control_byitem_json,
 
 posteriors_control <- (control_bda$posteriors)$support
 
-write.csv(posteriors_control, file = "posteriors/posteriors_control.csv")
+# write.csv(posteriors_control, file = "posteriors/posteriors_control.csv")
 
 # INFER PARAMETERS: TARGET CONDITION
 
@@ -195,19 +198,19 @@ target_bda <- webppl(paste("var itemData = ", target_byitem_json,
 
 posteriors_target <- (target_bda$posteriors)$support
 
-write.csv(posteriors_target, file = "posteriors/posteriors_target.csv")
+# write.csv(posteriors_target, file = "posteriors/posteriors_target.csv")
 
 # INFER PARAMETERS: NOT-TARGET CONDITION
 
 nottarget_byitem_json <- toJSON(nottarget_byitem)
 
 nottarget_bda <- webppl(paste("var itemData = ", nottarget_byitem_json, 
-                                      "\n var alpha =", full_maxap$alpha,
+                                      "\n var alpha =", full_maxap$alpha, 
                                       "\n", bda_bycondition))
 
 posteriors_nottarget <- (nottarget_bda$posteriors)$support
 
-write.csv(posteriors_nottarget, file = "posteriors/posteriors_nottarget.csv")
+# write.csv(posteriors_nottarget, file = "posteriors/posteriors_nottarget.csv")
 
 # INFER PARAMETERS: SYMMETRIC CONDITION
 
@@ -219,7 +222,7 @@ symmetric_bda <- webppl(paste("var itemData = ", symmetric_byitem_json,
 
 posteriors_symmetric <- (symmetric_bda$posteriors)$support
 
-write.csv(posteriors_symmetric, file = "posteriors/posteriors_symmetric.csv")
+# write.csv(posteriors_symmetric, file = "posteriors/posteriors_symmetric.csv")
 
 # NEW VISUALIZATIONS
 
@@ -284,7 +287,8 @@ ggplot(full_posteriors, aes(alpha)) + geom_density(alpha = 0.2) +
 
 vizparams_bycondition <- function(posteriors) {
   toplot <- posteriors %>% 
-    select(cost_is,cost_lookslike,cost_not) %>%
+    select(cost_is,cost_not,cost_lookslike) %>%
+   # select(cost_istarget,cost_looksliketarget,cost_nottarget) %>%
     gather(key = "parameter", value = "cost")
   ggplot(toplot, aes(cost, fill = parameter)) + geom_density(alpha = 0.2) +
     labs(x = "Inferred value", y = "Density")
@@ -297,81 +301,64 @@ vizparams_bycondition(posteriors_symmetric)
 
 # VISUALIZE POSTERIOR PREDICTIVES BY CONDITION 
 
-predictive_plot <- function(bda, data) {
-  predictions <- bda$predictions
-  observations <- data$observed_competitor
-  toplot <- cbind(predictions, observations)
-  colnames(toplot) <- c("id","prediction","observation")
-  ggplot(toplot, aes(x=prediction, y=observation)) + geom_point() +
-    labs(x = "Predicted proportion of competitor chosen", y = "Observed proportion of competitor chosen")
-}
+target_predictives <- target_bda$predictions
+nottarget_predictives <- nottarget_bda$predictions
+symmetric_predictives <- symmetric_bda$predictions
+control_predictives <- control_bda$predictions %>%
+  filter(id %in% symmetric_predictives$id)
 
-predictive_plot(symmetric_bda, symmetric_byitem)
-predictive_plot(target_bda, target_byitem)
-predictive_plot(nottarget_bda, nottarget_byitem)
-predictive_plot(control_bda, control_byitem)
+target_byitem$condition <- "target"
+nottarget_byitem$condition <- "nottarget"
+symmetric_byitem$condition <- "symmetric"
+control_byitem$condition <- "control"
 
-# EXPLORATORY ANALYSIS: CATEGORICAL COST 
+target_predictive_toplot <- cbind(target_predictives,target_byitem$observed_competitor,target_byitem$condition)
+nottarget_predictive_toplot <- cbind(nottarget_predictives,nottarget_byitem$observed_competitor,nottarget_byitem$condition)
+symmetric_predictive_toplot <- cbind(symmetric_predictives,symmetric_byitem$observed_competitor,symmetric_byitem$condition)
+control_predictive_toplot <- cbind(control_predictives,(control_byitem %>% filter (id %in% control_predictives$id))$observed_competitor,
+                                   (control_byitem %>% filter (id %in% control_predictives$id))$condition)
 
-# INFER PARAMETERS: CONTROL CONDITION
+colnames(target_predictive_toplot) <- c("id","prediction","observation","condition")
+colnames(nottarget_predictive_toplot) <- c("id","prediction","observation","condition")
+colnames(control_predictive_toplot) <- c("id","prediction","observation","condition")
+colnames(symmetric_predictive_toplot) <- c("id","prediction","observation","condition")
 
-bda_categcost <- read_file("bda_bycondition_categcost.txt")
+toplot_predictive <- rbind(target_predictive_toplot, nottarget_predictive_toplot, 
+                           symmetric_predictive_toplot, control_predictive_toplot)
 
-control_bda_categcost <- webppl(paste("var itemData = ", control_byitem_json, 
-                            "\n var alpha =", full_maxap$alpha,
-                            "\n", bda_categcost))
+ggplot(toplot_predictive, aes(x=prediction, y=observation, color = condition)) + geom_point() +
+    labs(x = "Predicted proportion of competitor chosen", y = "Observed proportion of competitor chosen") +
+  expand_limits(x = c(0,0.75), y = c(0,0.75)) +
+  geom_abline()
+  
+summary(lmer(observation ~ prediction + (prediction|id), data = toplot_predictive))
 
-posteriors_control_categcost <- cbind((control_bda_categcost$posteriors)$support, (control_bda_categcost$posteriors)$probs)
+# NAMEABILITY PLOTS
 
-write.csv(posteriors_control_categcost, file = "posteriors/posteriors_control_categcost.csv")
+toplot_nameability <- rbind(target_byitem,nottarget_byitem,symmetric_byitem,control_byitem)
 
-# INFER PARAMETERS: TARGET CONDITION
+competitor_nameability_plot <- ggplot(toplot_nameability, aes(x=competitor_nameability, y = observed_competitor)) +
+  facet_wrap(~condition) +
+  labs(x = "Competitor nameability", y = "Observed proportion of competitor chosen") +
+  geom_point() +
+  geom_smooth(method='lm',formula=y~x)
 
-target_bda_categcost <- webppl(paste("var itemData = ", target_byitem_json, 
-                           "\n var alpha =", full_maxap$alpha,
-                           "\n", bda_categcost))
+d_filtered_total <- merge(d_filtered, d_naming, by = "id")
 
-posteriors_target_categcost <- cbind((target_bda_categcost$posteriors)$support, (target_bda_categcost$posteriors)$probs)
+m_nameability <- glm (selection ~ condition * competitor_nameability, family = "binomial", data = d_filtered_total)
 
-write.csv(posteriors_target_categcost, file = "posteriors/posteriors_target_categcost.csv")
+summary(glmer(selection ~ condition * competitor_nameability + (1|workerid) + (1 + condition|id), family = "binomial", data = d_filtered_total))
 
-# INFER PARAMETERS: NOT-TARGET CONDITION
-
-nottarget_bda_categcost <- webppl(paste("var itemData = ", nottarget_byitem_json, 
-                              "\n var alpha =", full_maxap$alpha,
-                              "\n", bda_categcost))
-
-posteriors_nottarget_categcost <- cbind((nottarget_bda_categcost$posteriors)$support, (nottarget_bda_categcost$posteriors)$probs)
-
-write.csv(posteriors_nottarget_categcost, file = "posteriors/posteriors_nottarget_categcost.csv")
-
-# INFER PARAMETERS: SYMMETRIC CONDITION
-
-symmetric_bda_categcost <- webppl(paste("var itemData = ", symmetric_byitem_json, 
-                              "\n var alpha =", full_maxap$alpha,
-                              "\n", bda_categcost))
-
-posteriors_symmetric_categcost <- cbind((symmetric_bda_categcost$posteriors)$support, (symmetric_bda_categcost$posteriors)$probs)
-
-write.csv(posteriors_symmetric_categcost, file = "posteriors/posteriors_symmetric_categcost.csv")
-
-vizparams_bycondition_categcost <- function(posteriors) {
-  toplot <- posteriors %>% 
-    select(cost_is,cost_lookslike,cost_not) %>%
-    gather(key = "parameter", value = "cost")
-  ggplot(toplot, aes(cost, fill = parameter)) + geom_bar() +
-    labs(x = "Inferred value", y = "Density")
-}
-
-vizparams_bycondition_categcost(posteriors_control_categcost)
-vizparams_bycondition(posteriors_target_categcost)
-vizparams_bycondition(posteriors_nottarget_categcost)
-vizparams_bycondition(posteriors_symmetric_categcost)
-
+write.csv(symmetric_bda$predictions,"predictives/symmetric_predictives.csv" )
+write.csv(control_bda$predictions,"predictives/control_predictives.csv" )
+write.csv(target_bda$predictions,"predictives/target_predictives.csv" )
+write.csv(nottarget_bda$predictions,"predictives/nottarget_predictives.csv" )
 
 full_posteriors <- read.csv("posteriors/posteriors_fulldata.csv")
 posteriors_control <- read.csv("posteriors/posteriors_control.csv")
 posteriors_target <- read.csv("posteriors/posteriors_target.csv")
 posteriors_nottarget <- read.csv("posteriors/posteriors_nottarget.csv")
 posteriors_symmetric <- read.csv("posteriors/posteriors_symmetric.csv")
+
+
 

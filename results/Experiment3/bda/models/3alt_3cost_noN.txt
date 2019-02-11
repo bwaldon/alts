@@ -1,0 +1,11 @@
+var utterances = ["istarget", "looksliketarget","nottarget"];
+
+var cost = function (item,cost_is,cost_not,cost_lookslike) {
+  return {
+  "istarget": cost_is,
+  "nottarget" : cost_not,
+  "looksliketarget": cost_lookslike
+};
+};
+
+

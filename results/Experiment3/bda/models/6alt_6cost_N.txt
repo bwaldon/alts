@@ -1,0 +1,12 @@
+var utterances = ["istarget", "looksliketarget","nottarget","iscompetitor","notcompetitor","lookslikecompetitor"];
+
+var cost = function (item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor) {
+  return {
+  "istarget": cost_istarget / ((item.target_nameability)),
+  "nottarget" : cost_nottarget / ((item.target_nameability)),
+  "looksliketarget": cost_looksliketarget / ((item.target_nameability)),
+  "iscompetitor" : cost_iscompetitor / ((item.competitor_nameability)),
+  "notcompetitor" : cost_notcompetitor / ((item.competitor_nameability)),
+  "lookslikecompetitor" : cost_lookslikecompetitor / ((item.competitor_nameability))
+};
+} 
