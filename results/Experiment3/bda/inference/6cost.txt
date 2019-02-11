@@ -67,8 +67,8 @@ var dataAnalysis2 = function(){
 
 var posterior_samples = Infer({
   method: "MCMC",
-  samples: 1500,   // how many samples to obtain
-  burn: 15000,     // number of steps for algorithm to adapt
+  samples: 1000,   // how many samples to obtain
+  burn: 10000,     // number of steps for algorithm to adapt
   lag: 10,
   verbose: true,
   //callbacks: [editor.MCMCProgress()],
