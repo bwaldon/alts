@@ -63,10 +63,10 @@ var dataAnalysis2 = function(){
 
 var posterior_samples = Infer({
   method: "MCMC",
-  samples: 1000,   // how many samples to obtain
-  burn: 1000,     // number of steps for algorithm to adapt
+  samples: 1500,   // how many samples to obtain
+  burn: 15000,     // number of steps for algorithm to adapt
   lag: 10,
-  // verbose: true,
+  verbose: true,
  // callbacks: [editor.MCMCProgress()],
   model: dataAnalysis2})
 
@@ -83,4 +83,4 @@ var predictions = map(function(i) { return {id: i.id,
 
 var out = {predictions: predictions, posteriors: posterior_samples._cachedsupport}
 
-out
+json.write(resultsfileName, out)
