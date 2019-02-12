@@ -1,1 +1,1 @@
-node main.js
+srun bash -c 'node main.js'
