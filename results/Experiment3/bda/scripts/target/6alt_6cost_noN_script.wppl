@@ -1,3 +1,18 @@
+var resultsfileName = 'results/6alt_6cost_noN/target.json'
+ var itemData = [{"id":"baseball","observed_competitor":0.2273,"competitor_prior":0.6,"target_nameability":1,"competitor_nameability":0.9667},{"id":"cake","observed_competitor":0.2727,"competitor_prior":0.5333,"target_nameability":1,"competitor_nameability":1},{"id":"flower","observed_competitor":0.1818,"competitor_prior":0.6,"target_nameability":0.9667,"competitor_nameability":0.8},{"id":"hedgehog","observed_competitor":0.2273,"competitor_prior":0.5667,"target_nameability":0.9667,"competitor_nameability":0.5333},{"id":"horse","observed_competitor":0.1818,"competitor_prior":0.5667,"target_nameability":1,"competitor_nameability":1},{"id":"house","observed_competitor":0.2727,"competitor_prior":0.6667,"target_nameability":1,"competitor_nameability":1},{"id":"mouse","observed_competitor":0.2727,"competitor_prior":0.7333,"target_nameability":1,"competitor_nameability":0.4},{"id":"panda","observed_competitor":0.3182,"competitor_prior":0.4,"target_nameability":1,"competitor_nameability":0.6667},{"id":"railroad","observed_competitor":0.3182,"competitor_prior":0.4333,"target_nameability":0.9667,"competitor_nameability":0.9333},{"id":"rainbow","observed_competitor":0.3182,"competitor_prior":0.5333,"target_nameability":0.9667,"competitor_nameability":0.8667},{"id":"shark","observed_competitor":0.2273,"competitor_prior":0.3667,"target_nameability":1,"competitor_nameability":1},{"id":"spoon","observed_competitor":0.2273,"competitor_prior":0.6333,"target_nameability":1,"competitor_nameability":0.9667},{"id":"sundial","observed_competitor":0.2727,"competitor_prior":0.3667,"target_nameability":0.9667,"competitor_nameability":0.7333},{"id":"tadpole","observed_competitor":0.4091,"competitor_prior":0.5333,"target_nameability":0.7667,"competitor_nameability":0.4667},{"id":"wheel","observed_competitor":0.3182,"competitor_prior":0.4,"target_nameability":0.9667,"competitor_nameability":0.4667},{"id":"zebra","observed_competitor":0.3182,"competitor_prior":0.5,"target_nameability":1,"competitor_nameability":0.4}];
+
+var utterances = ["istarget", "looksliketarget","nottarget","iscompetitor","notcompetitor","lookslikecompetitor"];
+
+var cost = function (item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor) {
+  return {
+  "istarget": cost_istarget,
+  "nottarget" : cost_nottarget,
+  "looksliketarget": cost_looksliketarget,
+  "iscompetitor" : cost_iscompetitor,
+  "notcompetitor" : cost_notcompetitor,
+  "lookslikecompetitor" : cost_lookslikecompetitor
+};
+} 
 var alpha = 3.57
 
 var statePrior = function(c) {
@@ -65,7 +80,7 @@ var dataAnalysis2 = function(){
          cost_lookslikecompetitor: cost_lookslikecompetitor};
 }
 
-var posterior_samples = Infer({method: "MCMC", samples: 1200, burn: 12000, lag: 10, verbose: true, model: dataAnalysis2})
+var posterior_samples = Infer({method: "MCMC", samples: 12, burn: 120, lag: 10, verbose: true, model: dataAnalysis2})
 
 // viz.marginals(posterior_samples)
 

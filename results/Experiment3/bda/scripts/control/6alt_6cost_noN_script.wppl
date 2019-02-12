@@ -1,0 +1,99 @@
+var resultsfileName = 'results/6alt_6cost_noN/control.json'
+ var itemData = [{"id":"baseball","observed_competitor":0.0857,"competitor_prior":0.6,"target_nameability":1,"competitor_nameability":0.9667,"condition":"control"},{"id":"cake","observed_competitor":0.0286,"competitor_prior":0.5333,"target_nameability":1,"competitor_nameability":1,"condition":"control"},{"id":"cat","observed_competitor":0.0571,"competitor_prior":0.5667,"target_nameability":0.9667,"competitor_nameability":1,"condition":"control"},{"id":"flower","observed_competitor":0.0571,"competitor_prior":0.6,"target_nameability":0.9667,"competitor_nameability":0.8,"condition":"control"},{"id":"hammer","observed_competitor":0.0571,"competitor_prior":0.5333,"target_nameability":1,"competitor_nameability":0.4667,"condition":"control"},{"id":"hedgehog","observed_competitor":0.0857,"competitor_prior":0.5667,"target_nameability":0.9667,"competitor_nameability":0.5333,"condition":"control"},{"id":"horse","observed_competitor":0.0571,"competitor_prior":0.5667,"target_nameability":1,"competitor_nameability":1,"condition":"control"},{"id":"house","observed_competitor":0.0286,"competitor_prior":0.6667,"target_nameability":1,"competitor_nameability":1,"condition":"control"},{"id":"monkey","observed_competitor":0.1429,"competitor_prior":0.5333,"target_nameability":0.9667,"competitor_nameability":1,"condition":"control"},{"id":"mouse","observed_competitor":0.0571,"competitor_prior":0.7333,"target_nameability":1,"competitor_nameability":0.4,"condition":"control"},{"id":"panda","observed_competitor":0.0571,"competitor_prior":0.4,"target_nameability":1,"competitor_nameability":0.6667,"condition":"control"},{"id":"rabbit","observed_competitor":0.0286,"competitor_prior":0.5,"target_nameability":1,"competitor_nameability":0.4333,"condition":"control"},{"id":"railroad","observed_competitor":0.0286,"competitor_prior":0.4333,"target_nameability":0.9667,"competitor_nameability":0.9333,"condition":"control"},{"id":"rainbow","observed_competitor":0.0571,"competitor_prior":0.5333,"target_nameability":0.9667,"competitor_nameability":0.8667,"condition":"control"},{"id":"reindeer","observed_competitor":0.0571,"competitor_prior":0.6333,"target_nameability":0.9667,"competitor_nameability":1,"condition":"control"},{"id":"sailboat","observed_competitor":0.0571,"competitor_prior":0.5,"target_nameability":1,"competitor_nameability":0.6333,"condition":"control"},{"id":"shark","observed_competitor":0.0571,"competitor_prior":0.3667,"target_nameability":1,"competitor_nameability":1,"condition":"control"},{"id":"skateboard","observed_competitor":0.0286,"competitor_prior":0.5,"target_nameability":1,"competitor_nameability":0.8333,"condition":"control"},{"id":"spoon","observed_competitor":0.0286,"competitor_prior":0.6333,"target_nameability":1,"competitor_nameability":0.9667,"condition":"control"},{"id":"sundial","observed_competitor":0.0286,"competitor_prior":0.3667,"target_nameability":0.9667,"competitor_nameability":0.7333,"condition":"control"},{"id":"tadpole","observed_competitor":0.2,"competitor_prior":0.5333,"target_nameability":0.7667,"competitor_nameability":0.4667,"condition":"control"},{"id":"waspsnest","observed_competitor":0.0857,"competitor_prior":0.4667,"target_nameability":0.9,"competitor_nameability":0.4333,"condition":"control"},{"id":"wheel","observed_competitor":0.0571,"competitor_prior":0.4,"target_nameability":0.9667,"competitor_nameability":0.4667,"condition":"control"},{"id":"zebra","observed_competitor":0.0571,"competitor_prior":0.5,"target_nameability":1,"competitor_nameability":0.4,"condition":"control"}];
+
+var utterances = ["istarget", "looksliketarget","nottarget","iscompetitor","notcompetitor","lookslikecompetitor"];
+
+var cost = function (item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor) {
+  return {
+  "istarget": cost_istarget,
+  "nottarget" : cost_nottarget,
+  "looksliketarget": cost_looksliketarget,
+  "iscompetitor" : cost_iscompetitor,
+  "notcompetitor" : cost_notcompetitor,
+  "lookslikecompetitor" : cost_lookslikecompetitor
+};
+} 
+var alpha = 3.57
+
+var statePrior = function(c) {
+  return flip(c) ? "competitor" : "target"
+ };
+
+var utterancePrior = function(item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor) {
+  var uttProbs = map(function(u) {return Math.exp(-cost(item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor)[u]) }, utterances);
+  return categorical(uttProbs, utterances);
+};
+
+var literalMeanings = {
+  looksliketarget: function(state) { return state == "target" || state == "competitor"; },
+  istarget: function(state) { return state == "target"; },
+  nottarget: function(state) {return state == "competitor";  },
+  lookslikecompetitor: function(state) { return state == "target" || state == "competitor"; },
+  iscompetitor: function(state) { return state == "competitor"; },
+  notcompetitor: function(state) {return state == "target";  },
+};
+
+var literalListener = cache(function(utt) {
+  return Infer({model: function(){
+    var state = statePrior()
+    var meaning = literalMeanings[utt]
+    condition(meaning(state))
+    return state
+  }})
+});
+
+var speaker = cache(function(state,item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor) {
+  return Infer({model: function(){
+    var utt = utterancePrior(item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor)
+    factor(alpha * literalListener(utt).score(state))
+    return utt
+  }})
+});
+
+// pragmatic listener
+  
+var pragmaticListener = cache(function(item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor) {
+  return Infer({model: function(){
+    var state = statePrior(item.competitor_prior)
+    observe(speaker(state,item,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor),"looksliketarget")
+    return state
+  }})
+});
+
+var dataAnalysis2 = function(){
+  // prior over model parameter
+ var cost_looksliketarget = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_istarget = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_nottarget = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_lookslikecompetitor = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_iscompetitor = uniformDrift({a: 0, b: 5, w: 1})
+ var cost_notcompetitor = uniformDrift({a: 0, b: 5, w: 1})
+  mapData({data: itemData}, function(d) {
+    var prediction = Math.exp(pragmaticListener(d,cost_istarget,cost_nottarget,cost_looksliketarget,cost_iscompetitor,cost_notcompetitor,cost_lookslikecompetitor).score("competitor"))
+    observe(Gaussian({mu: prediction, sigma: 0.01}), d.observed_competitor)
+  })
+  return {cost_istarget: cost_istarget,
+         cost_nottarget: cost_nottarget,
+         cost_looksliketarget: cost_looksliketarget,
+         cost_iscompetitor: cost_iscompetitor,
+         cost_notcompetitor: cost_notcompetitor,
+         cost_lookslikecompetitor: cost_lookslikecompetitor};
+}
+
+var posterior_samples = Infer({method: "MCMC", samples: 12, burn: 120, lag: 10, verbose: true, model: dataAnalysis2})
+
+// viz.marginals(posterior_samples)
+
+var maxap = posterior_samples.MAP().val
+                   
+var predictions = map(function(i) { return {id: i.id, 
+                                           prediction: Math.exp(pragmaticListener(i, maxap.cost_istarget, maxap.cost_nottarget, 
+                                                                                  maxap.cost_looksliketarget, 
+                                                                                  maxap.cost_iscompetitor,
+                                                                                  maxap.cost_notcompetitor,
+                                                                                  maxap.cost_lookslikecompetitor).score("competitor")) 
+                                          } } , itemData)
+
+var out = {predictions: predictions, posteriors: posterior_samples._cachedsupport}
+
+json.write(resultsfileName, out)
