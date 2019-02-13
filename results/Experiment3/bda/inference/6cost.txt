@@ -65,7 +65,7 @@ var dataAnalysis2 = function(){
          cost_lookslikecompetitor: cost_lookslikecompetitor};
 }
 
-var posterior_samples = Infer({method: "MCMC", samples: 1200, burn: 12000, lag: 10, verbose: true, model: dataAnalysis2})
+var posterior_samples = Infer({method: "MCMC", samples: 1000, burn: 10000, lag: 10, verbose: true, model: dataAnalysis2})
 
 // viz.marginals(posterior_samples)
 
