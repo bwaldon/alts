@@ -1,1 +1,0 @@
-srun bash -c 'node main.js'

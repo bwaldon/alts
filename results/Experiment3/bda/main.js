@@ -19,11 +19,14 @@ var get_output = function(model) {
 	}
 	var inference = function(c) {
 		var script = "var resultsfileName = 'results/" + modelname + "/" + c.id + ".json'\n var itemData = " + c.results + ";\n\n" + model_wppl + "\n" + inference_wppl
-		var script_location = './scripts/' + c.id + "/" + modelname + '_script.wppl'
-		fs.writeFileSync(script_location, script)
-		var command = 'webppl ' + script_location + ' --require webppl-json' // + ">" + results_destination_js
+		var script_location = './scripts/' + c.id + "/" + modelname
+		fs.writeFileSync(script_location + '_script.wppl', script)
+		var command1 = 'webppl ' + script_location + '_script.wppl' + ' --require webppl-json --compile --out ' + script_location + '.js' // + ">" + results_destination_js
+		var command2 = 'node --max-old-space-size=8192 ' + script_location + '.js' 
+		console.log('Compiling bda for %s model, %s data', modelname, c.id)
+		shell.exec(command1)
 		console.log('Running bda for %s model, %s data', modelname, c.id)
-		shell.exec(command)
+		shell.exec(command2)
 	}
 
 	conditions.map(inference)

@@ -76,7 +76,7 @@ var dataAnalysis2 = function(){
 };
 }
 
-var posterior_samples = Infer({method: "MCMC", samples: 12, burn: 120, lag: 10, verbose: true, model: dataAnalysis2})
+var posterior_samples = Infer({method: "MCMC", samples: 1000, burn: 10000, lag: 10, verbose: true, model: dataAnalysis2})
 
 var maxap = posterior_samples.MAP().val
                    
