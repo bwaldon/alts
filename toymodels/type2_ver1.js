@@ -1,12 +1,13 @@
-var states = [['a'],['b'],['a','b']]
+var states = [['x'],['x','x']]
 
 var statePrior = function() {return uniformDraw(states);};
 
-var utterances = ["some","all"];
+var utterances = ["some","all"] // "somenotall"];
 
 var cost = {
   "some": 1,
   "all": 1,
+  // "somenotall" : 1,
 };
 
 var utterancePrior = function() {
@@ -17,6 +18,7 @@ var utterancePrior = function() {
 var literalMeanings = {
   all: function(state) { return state.length == 2; },
   some: function(state) { return state.length >= 1; },
+  somenotall: function(state) { return state.length == 1;},
 };
 
 var literalListener = cache(function(utt) {
